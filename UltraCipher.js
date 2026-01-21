@@ -1,51 +1,52 @@
 export default {
-  async fetch(request) {
-    // Handle CORS so your HTML can talk to the Worker
+  async fetch(request, env) {
+    // 1. Handle CORS (Cross-Origin Resource Sharing)
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "*", // Or your specific domain
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    };
+
     if (request.method === "OPTIONS") {
-      return new Response(null, {
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST",
-          "Access-Control-Allow-Headers": "Content-Type",
-        },
-      });
+      return new Response(null, { headers: corsHeaders });
     }
 
     if (request.method === "POST") {
       try {
-        const body = await request.json();
-        const message = body.text; // This is the input from your HTML
+        const { input } = await request.json();
+        if (!input) throw new Error("No input provided");
 
-        // --- Encryption Logic ---
-        const rawKey = new Uint8Array(32).fill(0x01); // Use your actual key
-        const key = await crypto.subtle.importKey(
-          "raw", rawKey, { name: "AES-GCM" }, false, ["encrypt"]
-        );
-
+        // --- Your Encryption Logic ---
+        const rawKey = new Uint8Array(32).fill(0x01); // Use a secret in production
+        const key = await crypto.subtle.importKey("raw", rawKey, { name: "AES-GCM" }, false, ["encrypt"]);
         const iv = crypto.getRandomValues(new Uint8Array(12));
-        const data = new TextEncoder().encode(message);
-        const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, data);
-
+        const encodedData = new TextEncoder().encode(input);
+        
+        const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encodedData);
+        
+        // Combine IV and Ciphertext
         const combined = new Uint8Array(iv.length + encrypted.byteLength);
         combined.set(iv);
         combined.set(new Uint8Array(encrypted), iv.length);
 
-        let finalString = btoa(String.fromCharCode(...combined));
+        // Base64 Encode 5 Times
+        let result = btoa(String.fromCharCode(...combined));
         for (let i = 0; i < 4; i++) {
-          finalString = btoa(finalString);
+          result = btoa(result);
         }
 
-        return new Response(JSON.stringify({ result: finalString }), {
-          headers: { 
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*" 
-          },
+        return new Response(JSON.stringify({ encoded: result }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
-      } catch (e) {
-        return new Response("Error: " + e.message, { status: 400 });
+
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message }), { 
+          status: 400, 
+          headers: corsHeaders 
+        });
       }
     }
 
-    return new Response("Send a POST request with { 'text': 'your data' }", { status: 405 });
-  },
+    return new Response("Send a POST request with { 'input': 'text' }", { status: 405 });
+  }
 };
