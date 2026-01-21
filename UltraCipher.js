@@ -1,47 +1,45 @@
-const crypto = require('crypto');
-
 /**
- * Encrypts text using AES-256-GCM and encodes the result in Base64 five times.
- * @param {string} text - The cleartext to encrypt.
- * @param {Buffer} key - A 32-byte key for AES-256.
- * @returns {string} - The 5x Base64 encoded payload.
+ * Encrypts data using AES-GCM and encodes it in Base64 5 times.
+ * Designed for Cloudflare Workers (Web Crypto API).
  */
-function encryptAESGCM5xBase64(text, key) {
-    const iv = crypto.randomBytes(12); // Recommended IV length for GCM
-    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+export default {
+  async fetch(request) {
+    // 1. Setup: 256-bit key (32 bytes)
+    // In production, use a Secret Variable for the key
+    const rawKey = new Uint8Array(32).fill(0x01); // Example key
+    const key = await crypto.subtle.importKey(
+      "raw",
+      rawKey,
+      { name: "AES-GCM" },
+      false,
+      ["encrypt"]
+    );
 
-    let encrypted = cipher.update(text, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
+    const message = "Sensitive data to be secured.";
+    const encoder = new TextEncoder();
+    const data = encoder.encode(message);
 
-    const authTag = cipher.getAuthTag().toString('hex');
+    // 2. Encryption
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encryptedBuffer = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: iv },
+      key,
+      data
+    );
 
-    // Combine IV, AuthTag, and Ciphertext into a single JSON string for transport
-    const payload = JSON.stringify({
-        iv: iv.toString('hex'),
-        authTag: authTag,
-        data: encrypted
-    });
+    // 3. Bundle IV + Ciphertext (Ciphertext includes the Auth Tag in Web Crypto)
+    const combined = new Uint8Array(iv.length + encryptedBuffer.byteLength);
+    combined.set(iv);
+    combined.set(new Uint8Array(encryptedBuffer), iv.length);
 
-    // Apply Base64 encoding 5 times
-    let encoded = payload;
-    for (let i = 0; i < 5; i++) {
-        encoded = Buffer.from(encoded).toString('base64');
+    // 4. Base64 Encode 5 Times
+    let finalString = btoa(String.fromCharCode(...combined));
+    for (let i = 0; i < 4; i++) {
+      finalString = btoa(finalString);
     }
 
-    return encoded;
-}
-
-// --- Implementation Example ---
-
-// Generate a secure 32-byte key (256 bits)
-const secretKey = crypto.randomBytes(32);
-const message = "Sensitive data to be secured.";
-
-try {
-    const finalResult = encryptAESGCM5xBase64(message, secretKey);
-    
-    console.log("Encryption successful.");
-    console.log("Final 5x Base64 String:", finalResult);
-} catch (error) {
-    console.error("Encryption failed:", error.message);
-}
+    return new Response(finalString, {
+      headers: { "content-type": "text/plain" },
+    });
+  },
+};
