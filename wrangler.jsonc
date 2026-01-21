@@ -1,6 +1,6 @@
 {
   "name": "aes-base64-worker",
-  "main": "ultracipher.js", // Change this to your actual filename
+  "main": "UltraCipher.js", // Change this to your actual filename
   "compatibility_date": "2026-01-21",
   "observability": {
     "enabled": true
