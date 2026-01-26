@@ -1,7 +1,16 @@
 export default {
   async fetch(request) {
+    // Handle CORS preflight
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: corsHeaders()
+      });
+    }
+
+    // Only allow POST (GET can also be allowed if needed)
     if (request.method !== "POST") {
-      return new Response("Method Not Allowed", { status: 405 });
+      return new Response("Method Not Allowed", { status: 405, headers: corsHeaders() });
     }
 
     const url = new URL(request.url);
@@ -29,18 +38,28 @@ export default {
       }
     }
 
-    return new Response("Not Found", { status: 404 });
+    return new Response("Not Found", { status: 404, headers: corsHeaders() });
   }
 };
 
+// --- JSON helper ---
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json" }
+    headers: { ...corsHeaders(), "Content-Type": "application/json" }
   });
 }
 
-// --- ULTRA-GCM Core (Web Crypto API) ---
+// --- CORS headers ---
+function corsHeaders() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type"
+  };
+}
+
+// --- ULTRA-GCM Core ---
 async function sha256(buf) {
   const hash = await crypto.subtle.digest("SHA-256", buf);
   return new Uint8Array(hash);
@@ -72,7 +91,6 @@ async function keystream(key, nonce, length) {
   return out;
 }
 
-// --- Encrypt ---
 async function ultraGCMEncrypt(text, secret) {
   const key = await deriveKey(secret);
   const nonce = crypto.getRandomValues(new Uint8Array(12));
@@ -90,7 +108,6 @@ async function ultraGCMEncrypt(text, secret) {
   };
 }
 
-// --- Decrypt ---
 async function ultraGCMDecrypt(body, secret) {
   const key = await deriveKey(secret);
   const nonce = unb64(body.nonce);
@@ -105,7 +122,6 @@ async function ultraGCMDecrypt(body, secret) {
   return new TextDecoder().decode(plain);
 }
 
-// --- Constant-time compare ---
 function equal(a, b) {
   if (a.length !== b.length) return false;
   let diff = 0;
