@@ -1,6 +1,8 @@
 export default {
   async fetch(request) {
-    // Handle CORS preflight
+    const url = new URL(request.url);
+
+    // --- Handle CORS preflight ---
     if (request.method === "OPTIONS") {
       return new Response(null, {
         status: 204,
@@ -8,27 +10,32 @@ export default {
       });
     }
 
-    // Only allow POST (GET can also be allowed if needed)
-    if (request.method !== "POST") {
+    // --- Determine input ---
+    let body = {};
+    if (request.method === "POST") {
+      try {
+        body = await request.json();
+      } catch {
+        return json({ error: "Invalid JSON" }, 400);
+      }
+    } else if (request.method === "GET") {
+      // Quick browser testing: accept query params
+      body.text = url.searchParams.get("text") || undefined;
+      body.secret = url.searchParams.get("secret") || undefined;
+    } else {
       return new Response("Method Not Allowed", { status: 405, headers: corsHeaders() });
-    }
-
-    const url = new URL(request.url);
-    let body;
-    try {
-      body = await request.json();
-    } catch {
-      return json({ error: "Invalid JSON" }, 400);
     }
 
     if (!body.secret) return json({ error: "Missing secret" }, 400);
 
+    // --- Encrypt endpoint ---
     if (url.pathname === "/encrypt") {
       if (!body.text) return json({ error: "No input provided" }, 400);
       const enc = await ultraGCMEncrypt(body.text, body.secret);
       return json(enc);
     }
 
+    // --- Decrypt endpoint ---
     if (url.pathname === "/decrypt") {
       try {
         const dec = await ultraGCMDecrypt(body, body.secret);
@@ -54,7 +61,7 @@ function json(data, status = 200) {
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type"
   };
 }
@@ -91,6 +98,7 @@ async function keystream(key, nonce, length) {
   return out;
 }
 
+// --- Encrypt ---
 async function ultraGCMEncrypt(text, secret) {
   const key = await deriveKey(secret);
   const nonce = crypto.getRandomValues(new Uint8Array(12));
@@ -108,6 +116,7 @@ async function ultraGCMEncrypt(text, secret) {
   };
 }
 
+// --- Decrypt ---
 async function ultraGCMDecrypt(body, secret) {
   const key = await deriveKey(secret);
   const nonce = unb64(body.nonce);
@@ -122,6 +131,7 @@ async function ultraGCMDecrypt(body, secret) {
   return new TextDecoder().decode(plain);
 }
 
+// --- Constant-time compare ---
 function equal(a, b) {
   if (a.length !== b.length) return false;
   let diff = 0;
