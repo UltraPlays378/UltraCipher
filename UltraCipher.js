@@ -2,42 +2,44 @@ export default {
   async fetch(request) {
     const url = new URL(request.url);
 
-    // CORS
+    // CORS preflight
     if (request.method === "OPTIONS") {
-      return new Response(null, {
-        status: 204,
-        headers: cors()
-      });
+      return new Response(null, { status: 204, headers: cors() });
     }
 
-    let text = null;
-    let salt = "";
+    let text, alg;
 
     if (request.method === "POST") {
       try {
         const body = await request.json();
         text = body.text;
-        salt = body.salt || "";
+        alg = (body.alg || "SHA-256").toUpperCase();
       } catch {
         return json({ error: "Invalid JSON" }, 400);
       }
     } else if (request.method === "GET") {
       text = url.searchParams.get("text");
-      salt = url.searchParams.get("salt") || "";
+      alg = (url.searchParams.get("alg") || "SHA-256").toUpperCase();
     } else {
       return new Response("Method Not Allowed", { status: 405, headers: cors() });
     }
 
     if (!text) return json({ error: "No input provided" }, 400);
 
-    const hash = await ultraHash(text, salt);
-
-    return json({
-      alg: "ULTRA-HASH/SHA-256",
-      hash
-    });
+    try {
+      const hash = await ultraHash(text, alg);
+      return json({
+        framework: "ULTRA-HASH",
+        alg,
+        hash
+      });
+    } catch (e) {
+      return json({ error: e.message }, 400);
+    }
   }
 };
+
+// ---------------- helpers ----------------
 
 function cors() {
   return {
@@ -54,11 +56,32 @@ function json(data, status = 200) {
   });
 }
 
-async function ultraHash(text, salt) {
+async function ultraHash(text, alg) {
   const enc = new TextEncoder();
-  const data = enc.encode(salt + text);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return [...new Uint8Array(digest)]
+  const data = enc.encode(text);
+
+  switch (alg) {
+    case "SHA-256":
+    case "SHA-384":
+    case "SHA-512": {
+      const digest = await crypto.subtle.digest(alg, data);
+      return hex(digest);
+    }
+
+    case "SHA-512/256": {
+      const full = await crypto.subtle.digest("SHA-512", data);
+      return hex(full).slice(0, 64); // 256 bits
+    }
+
+    default:
+      throw new Error(
+        "Unsupported algorithm. Use SHA-256, SHA-384, SHA-512, or SHA-512/256"
+      );
+  }
+}
+
+function hex(buffer) {
+  return [...new Uint8Array(buffer)]
     .map(b => b.toString(16).padStart(2, "0"))
     .join("");
 }
