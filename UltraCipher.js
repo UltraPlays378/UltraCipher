@@ -68,7 +68,7 @@ export default {
 
     // ----- STRETCHING -----
     let stretched = h4;
-    const rounds = 200_000;
+    const rounds = 2_000;
 
     for (let i = 0; i < rounds; i++) {
       const iBytes = encoder.encode(i.toString());
