@@ -1,87 +1,100 @@
 export default {
-  async fetch(request) {
-    const url = new URL(request.url);
+  async fetch(request, env) {
+    // ----- CORS -----
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type"
+    };
 
-    // CORS preflight
     if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: cors() });
+      return new Response(null, { headers: corsHeaders });
     }
 
-    let text, alg;
-
-    if (request.method === "POST") {
-      try {
-        const body = await request.json();
-        text = body.text;
-        alg = (body.alg || "SHA-256").toUpperCase();
-      } catch {
-        return json({ error: "Invalid JSON" }, 400);
-      }
-    } else if (request.method === "GET") {
-      text = url.searchParams.get("text");
-      alg = (url.searchParams.get("alg") || "SHA-256").toUpperCase();
-    } else {
-      return new Response("Method Not Allowed", { status: 405, headers: cors() });
+    if (request.method !== "POST") {
+      return new Response(
+        JSON.stringify({ error: "Method not allowed" }),
+        { status: 405, headers: corsHeaders }
+      );
     }
 
-    if (!text) return json({ error: "No input provided" }, 400);
-
+    // ----- INPUT -----
+    let body;
     try {
-      const hash = await ultraHash(text, alg);
-      return json({
-        framework: "ULTRA-HASH",
-        alg,
-        hash
-      });
-    } catch (e) {
-      return json({ error: e.message }, 400);
+      body = await request.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON" }),
+        { status: 400, headers: corsHeaders }
+      );
     }
+
+    if (!body.input || typeof body.input !== "string") {
+      return new Response(
+        JSON.stringify({ error: "No input provided" }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    // ----- NORMALIZATION -----
+    const encoder = new TextEncoder();
+    const input = encoder.encode(body.input.normalize("NFKC"));
+
+    // ----- SALT + PEPPER -----
+    const salt = crypto.getRandomValues(new Uint8Array(32));
+    const pepper = encoder.encode("ULTRA_HASHER_V4_INTERNAL_SECRET");
+
+    // ----- HASH HELPERS -----
+    async function hash(alg, data) {
+      return new Uint8Array(await crypto.subtle.digest(alg, data));
+    }
+
+    function concat(...arrays) {
+      const total = arrays.reduce((n, a) => n + a.length, 0);
+      const out = new Uint8Array(total);
+      let offset = 0;
+      for (const a of arrays) {
+        out.set(a, offset);
+        offset += a.length;
+      }
+      return out;
+    }
+
+    // ----- CASCADE -----
+    let h1 = await hash("SHA-256", concat(salt, input, pepper));
+    let h2 = await hash("SHA-512", concat(h1, salt));
+    let h3 = await hash("SHA-256", concat(h2, pepper)); // BLAKE2 not available in Workers
+    let h4 = await hash("SHA-512", concat(h3, salt, pepper));
+
+    // ----- STRETCHING -----
+    let stretched = h4;
+    const rounds = 200_000;
+
+    for (let i = 0; i < rounds; i++) {
+      const iBytes = encoder.encode(i.toString());
+      stretched = await hash("SHA-256", concat(stretched, salt, iBytes));
+    }
+
+    // ----- OUTPUT -----
+    const toHex = buf =>
+      [...buf].map(b => b.toString(16).padStart(2, "0")).join("");
+
+    const toB64 = buf =>
+      btoa(String.fromCharCode(...buf));
+
+    const result = {
+      alg: "ULTRA-HASHER/4",
+      hash: toHex(stretched),
+      salt: toB64(salt),
+      rounds,
+      encoding: "UTF-8 NFKC"
+    };
+
+    return new Response(JSON.stringify(result, null, 2), {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      }
+    });
   }
 };
-
-// ---------------- helpers ----------------
-
-function cors() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type"
-  };
-}
-
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...cors(), "Content-Type": "application/json" }
-  });
-}
-
-async function ultraHash(text, alg) {
-  const enc = new TextEncoder();
-  const data = enc.encode(text);
-
-  switch (alg) {
-    case "SHA-256":
-    case "SHA-384":
-    case "SHA-512": {
-      const digest = await crypto.subtle.digest(alg, data);
-      return hex(digest);
-    }
-
-    case "SHA-512/256": {
-      const full = await crypto.subtle.digest("SHA-512", data);
-      return hex(full).slice(0, 64); // 256 bits
-    }
-
-    default:
-      throw new Error(
-        "Unsupported algorithm. Use SHA-256, SHA-384, SHA-512, or SHA-512/256"
-      );
-  }
-}
-
-function hex(buffer) {
-  return [...new Uint8Array(buffer)]
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
-}
