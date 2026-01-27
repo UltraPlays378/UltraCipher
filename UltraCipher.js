@@ -4,46 +4,62 @@ export default {
       return new Response("POST only", { status: 405 });
     }
 
-    const input = await req.text();
-    if (!input) {
-      return Response.json({ error: "No input provided" }, { status: 400 });
+    if (!env.PEPPER || !env.CHILI) {
+      return Response.json(
+        { error: "Server misconfigured (missing secrets)" },
+        { status: 500 }
+      );
     }
 
+    const body = await req.json().catch(() => null);
+    if (!body || !body.input || !body.mode) {
+      return Response.json(
+        { error: "Required: input, mode" },
+        { status: 400 }
+      );
+    }
+
+    const { input, mode } = body;
     const encoder = new TextEncoder();
 
-    // 🧂 Salt (public)
-    const saltBytes = crypto.getRandomValues(new Uint8Array(16));
-    const salt = btoa(String.fromCharCode(...saltBytes));
+    let salt = "";
 
-    // 🌶️ Pepper (SECRET – env var)
-    const pepper = env.PEPPER; // REQUIRED
+    // 🔀 MODE SWITCH
+    if (mode === "salted") {
+      const saltBytes = crypto.getRandomValues(new Uint8Array(16));
+      salt = btoa(String.fromCharCode(...saltBytes));
+    } else if (mode === "deterministic") {
+      salt = ""; // no randomness, repeatable
+    } else {
+      return Response.json(
+        { error: "Invalid mode" },
+        { status: 400 }
+      );
+    }
 
-    // 🌶️🔥 Chili (rotating secret)
-    const chili = env.CHILI; // OPTIONAL but recommended
-
-    // STEP 1 — SHA-256(input + salt)
+    // STEP 1 — SHA-256
     let hash = await crypto.subtle.digest(
       "SHA-256",
       encoder.encode(input + salt)
     );
 
-    // STEP 2 — SHA-512(+ pepper)
+    // STEP 2 — SHA-512 + pepper
     hash = await crypto.subtle.digest(
       "SHA-512",
       encoder.encode(
         [...new Uint8Array(hash)]
           .map(b => b.toString(16).padStart(2, "0"))
-          .join("") + pepper
+          .join("") + env.PEPPER
       )
     );
 
-    // STEP 3 — SHA-384(+ chili)
+    // STEP 3 — SHA-384 + chili
     hash = await crypto.subtle.digest(
       "SHA-384",
       encoder.encode(
         [...new Uint8Array(hash)]
           .map(b => b.toString(16).padStart(2, "0"))
-          .join("") + chili
+          .join("") + env.CHILI
       )
     );
 
@@ -52,9 +68,10 @@ export default {
       .join("");
 
     return Response.json({
-      alg: "ULTRA-HASHER-v6-PEPPER-CHILI",
+      alg: "ULTRA-HASHER-v6.1",
+      mode,
       hash: finalHash,
-      salt
+      salt: mode === "salted" ? salt : null
     });
   }
 };
