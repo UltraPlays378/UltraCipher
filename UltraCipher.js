@@ -1,5 +1,5 @@
 export default {
-  async fetch(req) {
+  async fetch(req, env) {
     if (req.method !== "POST") {
       return new Response("POST only", { status: 405 });
     }
@@ -11,29 +11,50 @@ export default {
 
     const encoder = new TextEncoder();
 
-    // 🔹 Generate salt (128-bit)
+    // 🧂 Salt (public)
     const saltBytes = crypto.getRandomValues(new Uint8Array(16));
     const salt = btoa(String.fromCharCode(...saltBytes));
 
-    // 🔹 Step 1: SHA-256(input + salt)
-    let data = encoder.encode(input + salt);
-    let hash = await crypto.subtle.digest("SHA-256", data);
+    // 🌶️ Pepper (SECRET – env var)
+    const pepper = env.PEPPER; // REQUIRED
 
-    // 🔹 Step 2: SHA-512(previous hash)
-    hash = await crypto.subtle.digest("SHA-512", hash);
+    // 🌶️🔥 Chili (rotating secret)
+    const chili = env.CHILI; // OPTIONAL but recommended
 
-    // 🔹 Step 3: SHA-384(previous hash)
-    hash = await crypto.subtle.digest("SHA-384", hash);
+    // STEP 1 — SHA-256(input + salt)
+    let hash = await crypto.subtle.digest(
+      "SHA-256",
+      encoder.encode(input + salt)
+    );
 
-    // 🔹 Convert final hash → hex
+    // STEP 2 — SHA-512(+ pepper)
+    hash = await crypto.subtle.digest(
+      "SHA-512",
+      encoder.encode(
+        [...new Uint8Array(hash)]
+          .map(b => b.toString(16).padStart(2, "0"))
+          .join("") + pepper
+      )
+    );
+
+    // STEP 3 — SHA-384(+ chili)
+    hash = await crypto.subtle.digest(
+      "SHA-384",
+      encoder.encode(
+        [...new Uint8Array(hash)]
+          .map(b => b.toString(16).padStart(2, "0"))
+          .join("") + chili
+      )
+    );
+
     const finalHash = [...new Uint8Array(hash)]
       .map(b => b.toString(16).padStart(2, "0"))
       .join("");
 
     return Response.json({
-      alg: "ULTRA-HASHER-v5-MULTI",
+      alg: "ULTRA-HASHER-v6-PEPPER-CHILI",
       hash: finalHash,
-      salt: salt
+      salt
     });
   }
 };
