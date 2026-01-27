@@ -1,9 +1,9 @@
 # UltraCipher
 
-💀 The ultimate hash & manifest setup for iOS Shortcuts  
-Version: v1.0  
-Mode: Deterministic, salt-free, straight-up Glitch King style  
+The ultimate hash & manifest setup for iOS Shortcuts  
 
+Version: v1.0  
+Mode: Deterministic, salt-free
 ---
 
 ## What’s inside
@@ -26,9 +26,19 @@ Mode: Deterministic, salt-free, straight-up Glitch King style
 
 ---
 
+## How to Use
+
+1. Open **Shortcuts** → create a new shortcut  
+2. Use **“Get Contents of URL”** → paste the release zip URL  
+3. Save to **Shortcuts folder**  
+4. Optional: **Extract Archive** to access `HashSecurity.txt` & `Manifest.json`  
+5. Now you can reference the files in your own **Shortcuts workflows**  
+6. **Important:** Do not tamper with files — corrupted files = your problem 💀  
+
+---
+
 ## Notes
 
-- If you corrupt these files, **NOT MY PROBLEM** 💀  
 - No uninstallers, no mercy  
 - Keep the files as-is to stay in UltraCipher compliance 😎  
 
