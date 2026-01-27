@@ -1,8 +1,21 @@
 {
-  "name": "ultra-cipher-worker",
+  // Worker project name
+  "name": "UltraCipher_Setup",
+
+  // Entry file — your Worker code
   "main": "UltraCipher.js",
-  "compatibility_date": "2026-01-21",
-  "observability": {
-    "enabled": true
-  }
+
+  // Cloudflare compatibility date
+  "compatibility_date": "2026-01-01",
+
+  // KV namespace binding
+  "kv_namespaces": [
+    {
+      "binding": "ULTRACIPHER_SETUP",
+      "id": "94e1ba72-662d-4e55-abbb-dc6db7e6e21f" // <- your KV namespace ID
+    }
+  ]
+
+  // Optional: routes if using a custom domain
+  // "routes": ["https://ultracipher.antiparental378.workers.dev/*"]
 }
