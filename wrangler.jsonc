@@ -1,5 +1,5 @@
 {
-  "name": "ultra-cipher-worker",
+  "name": "ultracipher-setup",
   "main": "UltraCipher.js",
   "compatibility_date": "2026-01-21",
   "observability": {
