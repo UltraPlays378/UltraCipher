@@ -29,6 +29,12 @@ export default {
         return new Response(UltraCipherData.MPK, { headers: { ...headers, "Content-Type": "application/json" } });
       case "/manifest":
         return new Response(UltraCipherData.manifest, { headers: { ...headers, "Content-Type": "application/json" } });
+      case "/":
+        // List all files at root
+        const fileList = Object.keys(UltraCipherData)
+          .map(f => `${f}: ${url.origin}/${f}`)
+          .join("\n");
+        return new Response(`UltraCipher Worker is live. Available files:\n\n${fileList}`, { headers });
       default:
         return new Response("UltraCipher Worker: Invalid path", { status: 404, headers });
     }
