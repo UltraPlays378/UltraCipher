@@ -1,5 +1,5 @@
 # Worker project name (never .js)
-name = "ultracipher_releases"
+name = "ultracipher-releases"
 
 # Entry file — your Worker code
 main = "UltraDownloader.js"
