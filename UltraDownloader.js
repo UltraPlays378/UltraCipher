@@ -13,22 +13,24 @@ export default {
       manifest: "data:application/json;base64,ewogICJ2ZXJzaW9uIjogIjEuMCIsCiAgImhhc2giOiAiYjE5OTYxYTdiNTFjZDBjZDFmMjFkY2ZmZDRlYWY5YmUxZDRlZWEwYjhkMjQ3Yzg5ZTRkNzViZTA1OWJjMzk5MjAiLAogICJwb2xpY3lfa2V5IjogImIxOTk2MWE3YjUxY2QwY2QxZjIxZGNmZmQ0ZWFmOWJlMWQ0ZWVhMGI4ZDI0N2M4OWU0ZDc1YmUwNTliYzM5OTI4OTY0Mjk5MzFlZTk2YzFlODIzNmU3YjA0M2RjY2Y4ZSIsCiAgIm1vZGUiOiAiZGV0ZXJtaW5pc3RpYyIsCiAgImVuZm9yY2VtZW50IjogIndhcm4iLAogICJub3RlcyI6ICJNYW5pZmVzdC5qc29uIGlzIHNhY3JlZC4gRG8gbm90IHRvdWNoIHVubGVzcyB5b3Uga25vdyB3aGF0IHlvdSBhcmUgZG9pbmcuIFRhbXBlcmluZyA9IHlvdXIgcHJvYmxlbS4iCn0="
     };
 
+    // Default headers including CORS
+    const headers = {
+      "Content-Type": "text/plain",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET",
+      "Access-Control-Allow-Headers": "Content-Type"
+    };
+
     // Serve based on path
     switch (url.pathname) {
       case "/hashsecurity":
-        return new Response(UltraCipherData.hashsecurity, {
-          headers: { "Content-Type": "text/plain" }
-        });
+        return new Response(UltraCipherData.hashsecurity, { headers });
       case "/MPK":
-        return new Response(UltraCipherData.MPK, {
-          headers: { "Content-Type": "application/json" }
-        });
+        return new Response(UltraCipherData.MPK, { headers: { ...headers, "Content-Type": "application/json" } });
       case "/manifest":
-        return new Response(UltraCipherData.manifest, {
-          headers: { "Content-Type": "application/json" }
-        });
+        return new Response(UltraCipherData.manifest, { headers: { ...headers, "Content-Type": "application/json" } });
       default:
-        return new Response("UltraCipher Worker: Invalid path", { status: 404 });
+        return new Response("UltraCipher Worker: Invalid path", { status: 404, headers });
     }
   }
 };
