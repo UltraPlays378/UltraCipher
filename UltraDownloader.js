@@ -1,39 +1,26 @@
 addEventListener("fetch", event => {
-  event.respondWith(handle(event.request))
+  event.respondWith(handleRequest(event.request))
 })
 
-const FILES = {
-  "/hashsecurity": {
-    filename: "hashsecurity.txt",
-    mime: "text/plain",
-    base64: "IyBVbHRyYUNpcGhlciBIYXNoU2VjdXJpdHkgRmlsZQojIFVzZWQgZm9yIHBhc3N3b3JkIHNlY3VyaXR5IC8gZGV0ZXJtaW5pc3RpYyBzZXR1cAoKIyBFeGFtcGxlIGR1bW15IGhhc2ggZGF0YQpUZXN0IEhhc2ggQ29udGVudA=="
-  },
+async function handleRequest(request) {
+  const url = new URL(request.url)
 
-  "/manifest": {
-    filename: "manifest.json",
-    mime: "application/json",
-    base64: "eyJuYW1lIjoiVWx0cmFDaXBoZXIiLCJ2ZXJzaW9uIjoiMS4wLjAifQ=="
-  }
-}
+  // Base64 file data
+  const base64Data =
+    "IyBVbHRyYUNpcGhlciBIYXNoU2VjdXJpdHkgRmlsZQojIFVzZWQgZm9yIHBhc3N3b3JkIHNlY3VyaXR5IC8gZGV0ZXJtaW5pc3RpYyBzZXR1cAoKIyBFeGFtcGxlIGR1bW15IGhhc2ggZGF0YQpUZXN0IEhhc2ggQ29udGVudA=="
 
-function decodeBase64(input) {
-  const clean = input.includes(",") ? input.split(",")[1] : input
-  return Uint8Array.from(atob(clean), c => c.charCodeAt(0))
-}
+  // Decode base64 → text
+  const decoded = atob(base64Data)
 
-async function handle(request) {
-  const path = new URL(request.url).pathname
-  const file = FILES[path]
-
-  if (!file) {
-    return new Response("Not Found", { status: 404 })
+  // ROOT PATH SERVES FILE
+  if (url.pathname === "/") {
+    return new Response(decoded, {
+      headers: {
+        "Content-Type": "text/plain",
+        "Content-Disposition": 'attachment; filename="hashsecurity.txt"'
+      }
+    })
   }
 
-  return new Response(decodeBase64(file.base64), {
-    headers: {
-      "Content-Type": file.mime,
-      "Content-Disposition": `attachment; filename="${file.filename}"`,
-      "Cache-Control": "no-store"
-    }
-  })
+  return new Response("Not Found", { status: 404 })
 }
