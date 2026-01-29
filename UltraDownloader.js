@@ -1,42 +1,39 @@
-export default {
-  async fetch(req, env) {
-    if (req.method !== "GET") {
-      return new Response("Method Not Allowed", { status: 405 });
-    }
+addEventListener("fetch", event => {
+  event.respondWith(handle(event.request))
+})
 
-    const url = new URL(req.url);
+const FILES = {
+  "/hashsecurity": {
+    filename: "hashsecurity.txt",
+    mime: "text/plain",
+    base64: "IyBVbHRyYUNpcGhlciBIYXNoU2VjdXJpdHkgRmlsZQojIFVzZWQgZm9yIHBhc3N3b3JkIHNlY3VyaXR5IC8gZGV0ZXJtaW5pc3RpYyBzZXR1cAoKIyBFeGFtcGxlIGR1bW15IGhhc2ggZGF0YQpUZXN0IEhhc2ggQ29udGVudA=="
+  },
 
-    // UltraCipher Base64 / data URLs
-    const UltraCipherData = {
-      hashsecurity: "data:text/plain;base64,IyBVbHRyYUNpcGhlciBIYXNoU2VjdXJpdHkgRmlsZQojIFVzZWQgZm9yIHBhc3N3b3JkIHNlY3VyaXR5IC8gZGV0ZXJtaW5pc3RpYyBzZXR1cAoKIyBFeGFtcGxlIGR1bW15IGhhc2ggZGF0YQpUZXN0IEhhc2ggQ29udGVudA==",
-      MPK: "data:application/json;base64,ewogICJwb2xpY3lfdmVyc2lvbiI6ICIxLjAiLAogICJleHBlY3RlZF9tYW5pZmVzdF9oYXNoIjogImIxOTk2MWE3YjUxY2QwY2QxZjIxZGNmZmQ0ZWFmOWJlMWQ0ZWVhMGI4ZDI0N2M4OWU0ZDc1YmUwNTliYzM5OTI4OTY0Mjk5MzFlZTk2YzFlODIzNmU3YjA0M2RjY2Y4ZSIsCiAgIm1vZGUiOiAiZGV0ZXJtaW5pc3RpYyIsCiAgImVuZm9yY2VtZW50IjogIndhcm4iLAogICJub3RlcyI6ICJNYW5pZmVzdC5qc29uIGlzIHNhY3JlZC4gRG8gbm90IHRvdWNoIHVubGVzcyB5b3Uga25vdyB3aGF0IHlvdSBhcmUgZG9pbmcuIFRhbXBlcmluZyA9IHlvdXIgcHJvYmxlbS4iCn0=",
-      manifest: "data:application/json;base64,ewogICJ2ZXJzaW9uIjogIjEuMCIsCiAgImhhc2giOiAiYjE5OTYxYTdiNTFjZDBjZDFmMjFkY2ZmZDRlYWY5YmUxZDRlZWEwYjhkMjQ3Yzg5ZTRkNzViZTA1OWJjMzk5MjAiLAogICJwb2xpY3lfa2V5IjogImIxOTk2MWE3YjUxY2QwY2QxZjIxZGNmZmQ0ZWFmOWJlMWQ0ZWVhMGI4ZDI0N2M4OWU0ZDc1YmUwNTliYzM5OTI4OTY0Mjk5MzFlZTk2YzFlODIzNmU3YjA0M2RjY2Y4ZSIsCiAgIm1vZGUiOiAiZGV0ZXJtaW5pc3RpYyIsCiAgImVuZm9yY2VtZW50IjogIndhcm4iLAogICJub3RlcyI6ICJNYW5pZmVzdC5qc29uIGlzIHNhY3JlZC4gRG8gbm90IHRvdWNoIHVubGVzcyB5b3Uga25vdyB3aGF0IHlvdSBhcmUgZG9pbmcuIFRhbXBlcmluZyA9IHlvdXIgcHJvYmxlbS4iCn0="
-    };
-
-    // Default headers including CORS
-    const headers = {
-      "Content-Type": "text/plain",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET",
-      "Access-Control-Allow-Headers": "Content-Type"
-    };
-
-    // Serve based on path
-    switch (url.pathname) {
-      case "/hashsecurity":
-        return new Response(UltraCipherData.hashsecurity, { headers });
-      case "/MPK":
-        return new Response(UltraCipherData.MPK, { headers: { ...headers, "Content-Type": "application/json" } });
-      case "/manifest":
-        return new Response(UltraCipherData.manifest, { headers: { ...headers, "Content-Type": "application/json" } });
-      case "/":
-        // List all files at root
-        const fileList = Object.keys(UltraCipherData)
-          .map(f => `${f}: ${url.origin}/${f}`)
-          .join("\n");
-        return new Response(`UltraCipher Worker is live. Available files:\n\n${fileList}`, { headers });
-      default:
-        return new Response("UltraCipher Worker: Invalid path", { status: 404, headers });
-    }
+  "/manifest": {
+    filename: "manifest.json",
+    mime: "application/json",
+    base64: "eyJuYW1lIjoiVWx0cmFDaXBoZXIiLCJ2ZXJzaW9uIjoiMS4wLjAifQ=="
   }
-};
+}
+
+function decodeBase64(input) {
+  const clean = input.includes(",") ? input.split(",")[1] : input
+  return Uint8Array.from(atob(clean), c => c.charCodeAt(0))
+}
+
+async function handle(request) {
+  const path = new URL(request.url).pathname
+  const file = FILES[path]
+
+  if (!file) {
+    return new Response("Not Found", { status: 404 })
+  }
+
+  return new Response(decodeBase64(file.base64), {
+    headers: {
+      "Content-Type": file.mime,
+      "Content-Disposition": `attachment; filename="${file.filename}"`,
+      "Cache-Control": "no-store"
+    }
+  })
+}
