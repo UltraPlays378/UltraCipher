@@ -5,19 +5,17 @@ addEventListener("fetch", event => {
 async function handleRequest(request) {
   const url = new URL(request.url)
 
-  // Root path serves all files as one JSON download
   if (url.pathname === "/") {
-    const files = {
-      "hashsecurity.txt": "IyBVbHRyYUNpcGhlciBIYXNoU2VjdXJpdHkgRmlsZQojIFVzZWQgZm9yIHBhc3N3b3JkIHNlY3VyaXR5IC8gZGV0ZXJtaW5pc3RpYyBzZXR1cAoKIyBFeGFtcGxlIGR1bW15IGhhc2ggZGF0YQpUZXN0IEhhc2ggQ29udGVudA==",
-      "manifest.json": "eyJuYW1lIjoiVWx0cmFDaXBoZXIiLCJ2ZXJzaW9uIjoiMS4wLjAifQ=="
-    }
+    // Prebuilt ZIP file (Base64)
+    const zipBase64 = "UEsDBBQAAAAI...YOUR_BASE64_HERE...AAAAA=="
 
-    const json = JSON.stringify(files, null, 2)
+    // Decode Base64 → binary
+    const uint8Array = Uint8Array.from(atob(zipBase64), c => c.charCodeAt(0))
 
-    return new Response(json, {
+    return new Response(uint8Array, {
       headers: {
-        "Content-Type": "application/json",
-        "Content-Disposition": 'attachment; filename="UltraCipherFiles.json"',
+        "Content-Type": "application/zip",
+        "Content-Disposition": 'attachment; filename="UltraCipherFiles.zip"',
         "Cache-Control": "no-store"
       }
     })
