@@ -5,6 +5,7 @@ addEventListener("fetch", event => {
 async function handleRequest(request) {
   const url = new URL(request.url)
 
+  // Root path serves all files as one JSON download
   if (url.pathname === "/") {
     const files = {
       "hashsecurity.txt": "IyBVbHRyYUNpcGhlciBIYXNoU2VjdXJpdHkgRmlsZQojIFVzZWQgZm9yIHBhc3N3b3JkIHNlY3VyaXR5IC8gZGV0ZXJtaW5pc3RpYyBzZXR1cAoKIyBFeGFtcGxlIGR1bW15IGhhc2ggZGF0YQpUZXN0IEhhc2ggQ29udGVudA==",
