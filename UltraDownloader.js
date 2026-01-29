@@ -5,21 +5,35 @@ addEventListener("fetch", event => {
 async function handleRequest(request) {
   const url = new URL(request.url)
 
-  if (url.pathname === "/") {
-    // Prebuilt ZIP file (Base64)
-    const zipBase64 = "UEsDBBQAAAAI...YOUR_BASE64_HERE...AAAAA=="
+  // UltraCipher raw file contents
+  const UltraCipherFiles = {
+    "hashsecurity.txt": `# UltraCipher HashSecurity File
+# Used for password security / deterministic setup
 
-    // Decode Base64 → binary
-    const uint8Array = Uint8Array.from(atob(zipBase64), c => c.charCodeAt(0))
+# Example dummy hash data
+Test Hash Content
+`,
+    "manifest.json": `{
+  "name": "UltraCipher",
+  "version": "1.0.0"
+}`
+  }
 
-    return new Response(uint8Array, {
+  // Remove leading "/" to match keys
+  const key = url.pathname.slice(1)
+
+  if (UltraCipherFiles[key]) {
+    let contentType = "text/plain"
+    if (key.endsWith(".json")) contentType = "application/json"
+
+    return new Response(UltraCipherFiles[key], {
       headers: {
-        "Content-Type": "application/zip",
-        "Content-Disposition": 'attachment; filename="UltraCipherFiles.zip"',
+        "Content-Type": contentType,
+        "Content-Disposition": `attachment; filename="${key}"`,
         "Cache-Control": "no-store"
       }
     })
   }
 
-  return new Response("Not Found", { status: 404 })
+  return new Response("UltraCipher Worker: Invalid file", { status: 404 })
 }
