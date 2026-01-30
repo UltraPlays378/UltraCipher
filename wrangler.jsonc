@@ -1,6 +1,6 @@
 {
   // Worker project name
-  "name": "ultracipher_setup.js",
+  "name": "ultracipher",
 
   // Entry file — your Worker code
   "main": "UltraCipher.js",
