@@ -1,11 +1,7 @@
-# Worker project name (never .js)
-name = "ultracipher-releases"
+name = "ultracipher"
+main = "ultracipher_setup.js"
+compatibility_date = "2026-01-30"
 
-# Entry file — your Worker code
-main = "UltraDownloader.js"
-
-# Cloudflare compatibility date
-compatibility_date = "2026-01-28"
 
 # Workers_dev = false if deploying to custom subdomain
 workers_dev = false
