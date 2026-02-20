@@ -44,12 +44,17 @@ export default {
             return new Response(null, { headers: corsHeaders });
         }
 
-        if (request.method !== "POST") {
-            return new Response("Method Not Allowed. Use POST.", { 
-                status: 405,
-                headers: corsHeaders
-            });
-        }
+if (request.method === "GET") {
+  return new Response(JSON.stringify({
+    message: "This API only accepts POST requests."
+  }), {
+    headers: {
+      "Content-Type": "application/json",
+      ...corsHeaders
+    }
+  });
+}
+
 
         try {
             const body = await request.json();
