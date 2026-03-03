@@ -12,8 +12,10 @@
   "kv_namespaces": [
     {
       "binding": "ULTRACIPHER_RATE_LIMIT_KV",
-      // Replace with your real KV namespace id.
-      "id": "REPLACE_WITH_REAL_KV_NAMESPACE_ID"
+      // Replace with your real KV namespace id (e.g. for namespace name "ultracipher-keys").
+      "id": "REPLACE_WITH_ULTRACIPHER_KEYS_NAMESPACE_ID",
+      // Optional preview namespace for `wrangler dev`.
+      "preview_id": "REPLACE_WITH_ULTRACIPHER_KEYS_PREVIEW_ID"
     }
   ],
 
