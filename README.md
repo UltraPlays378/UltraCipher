@@ -1,7 +1,7 @@
 # UltraCipher
 
  The ultimate hash & manifest setup for iOS Shortcuts  
-Version: v1.2  
+Version: v1.3  
 Mode: Deterministic (when key/salt/pepper are fixed), Glitch King style  
 
 ---
@@ -21,7 +21,7 @@ salt + text + pepper
 
 ## API behavior
 
-- Methods allowed: `POST` and `OPTIONS`.
+- Methods allowed: `POST`, `OPTIONS`, and `GET /setup`.
 - Any other method returns `405` with JSON error.
 - Invalid JSON returns `400` with JSON error.
 
@@ -43,6 +43,21 @@ Example request body:
 ```
 
 
+
+## API key setup endpoint
+
+- `GET /setup` generates an API key and returns it once per client IP during a cooldown window.
+- Cooldown default is **30 days**.
+- Override cooldown with Worker env var `SETUP_API_KEY_COOLDOWN_DAYS` (e.g. `7` for one week).
+- If `/setup` is called again before cooldown ends, response is `429` with `Retry-After` and the previously issued key for that IP.
+- **Important:** copy/save the key when generated.
+
+Example:
+
+```bash
+curl https://<your-worker-domain>/setup
+```
+
 ## API key authentication (`x-api-key`)
 
 - If `ULTRACIPHER_API_KEYS` is configured in Worker environment (comma-separated),
@@ -55,6 +70,9 @@ Example:
 ```http
 x-api-key: your-secret-key
 ```
+
+
+Cloudflare-side requirement: `/setup` needs the `RATE_LIMIT_KV` binding configured and available in the deployed Worker environment.
 
 ## Rate limiting setup
 

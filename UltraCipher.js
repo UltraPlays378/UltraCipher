@@ -3,6 +3,7 @@ const MAX_SALT_LENGTH = 256;
 const MAX_KEY_VALUES = 64;
 const RATE_LIMIT_WINDOW_SECONDS = 60;
 const RATE_LIMIT_MAX_REQUESTS = 60;
+const DEFAULT_SETUP_COOLDOWN_DAYS = 30;
 
 /**
  * 2000-bit One-Way Hash (Truncated to 500 hex chars)
@@ -65,29 +66,27 @@ function getCorsHeaders(request, env) {
     if (allowedOrigins.length === 0 || allowedOrigins.includes("*")) {
         return {
             "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, x-api-key",
         };
     }
 
     if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
         return {
             "Access-Control-Allow-Origin": requestOrigin,
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, x-api-key",
             "Vary": "Origin",
         };
     }
 
-    // No allowed origin match: return first configured origin as a safe default.
     return {
         "Access-Control-Allow-Origin": allowedOrigins[0],
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, x-api-key",
         "Vary": "Origin",
     };
 }
-
 
 function getApiKeys(env) {
     const csv = normalizeString(env?.ULTRACIPHER_API_KEYS);
@@ -137,6 +136,61 @@ function parseKey(key) {
     return parsed;
 }
 
+function generateApiKey() {
+    const bytes = new Uint8Array(24);
+    crypto.getRandomValues(bytes);
+    const token = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    return `uc_${token}`;
+}
+
+function getSetupCooldownSeconds(env) {
+    const raw = Number(normalizeString(env?.SETUP_API_KEY_COOLDOWN_DAYS));
+    const days = Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_SETUP_COOLDOWN_DAYS;
+    return Math.floor(days * 24 * 60 * 60);
+}
+
+async function handleSetupRequest(request, env, corsHeaders) {
+    const kv = env?.RATE_LIMIT_KV;
+    if (!kv) {
+        return jsonResponse({
+            error: "RATE_LIMIT_KV binding is required for /setup",
+        }, corsHeaders, 500);
+    }
+
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    const cooldownSeconds = getSetupCooldownSeconds(env);
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const lockKey = `setup:lock:${ip}`;
+    const apiKeyKey = `setup:apiKey:${ip}`;
+
+    const lockUntil = Number(await kv.get(lockKey));
+    const existingApiKey = await kv.get(apiKeyKey);
+
+    if (Number.isFinite(lockUntil) && lockUntil > nowSeconds) {
+        return jsonResponse({
+            error: "API key already generated for this IP during cooldown window",
+            apiKey: existingApiKey || null,
+            retryAfterSeconds: lockUntil - nowSeconds,
+            message: "Copy and store this API key safely. A new key cannot be generated yet.",
+        }, corsHeaders, 429, {
+            "Retry-After": String(lockUntil - nowSeconds),
+        });
+    }
+
+    const apiKey = generateApiKey();
+    const nextAllowedAt = nowSeconds + cooldownSeconds;
+
+    await kv.put(apiKeyKey, apiKey, { expirationTtl: cooldownSeconds });
+    await kv.put(lockKey, String(nextAllowedAt), { expirationTtl: cooldownSeconds });
+
+    return jsonResponse({
+        apiKey,
+        validForSeconds: cooldownSeconds,
+        nextKeyAvailableAtEpochSeconds: nextAllowedAt,
+        message: "Copy and store this API key safely. It will not be reissued until cooldown ends.",
+    }, corsHeaders, 200);
+}
+
 async function checkRateLimit(request, env) {
     const kv = env?.RATE_LIMIT_KV;
     if (!kv) {
@@ -165,6 +219,7 @@ async function checkRateLimit(request, env) {
 export default {
     async fetch(request, env) {
         const corsHeaders = getCorsHeaders(request, env);
+        const url = new URL(request.url);
 
         if (request.method === "OPTIONS") {
             return new Response(null, {
@@ -173,9 +228,13 @@ export default {
             });
         }
 
+        if (request.method === "GET" && url.pathname === "/setup") {
+            return handleSetupRequest(request, env, corsHeaders);
+        }
+
         if (request.method !== "POST") {
-            return jsonResponse({ error: "Method not allowed. Use POST." }, corsHeaders, 405, {
-                "Allow": "POST, OPTIONS",
+            return jsonResponse({ error: "Method not allowed. Use POST or GET /setup." }, corsHeaders, 405, {
+                "Allow": "GET, POST, OPTIONS",
             });
         }
 
