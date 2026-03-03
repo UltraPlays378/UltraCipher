@@ -42,6 +42,20 @@ Example request body:
 }
 ```
 
+
+## API key authentication (`x-api-key`)
+
+- If `ULTRACIPHER_API_KEYS` is configured in Worker environment (comma-separated),
+  each request must include header `x-api-key: <one-of-configured-keys>`.
+- If `ULTRACIPHER_API_KEYS` is unset/empty, API key auth is disabled.
+- Invalid/missing key returns `401`.
+
+Example:
+
+```http
+x-api-key: your-secret-key
+```
+
 ## Rate limiting setup
 
 - Worker-side limit uses KV counters (fixed window): `60` requests per `60` seconds per IP.

@@ -88,6 +88,27 @@ function getCorsHeaders(request, env) {
     };
 }
 
+
+function getApiKeys(env) {
+    const csv = normalizeString(env?.ULTRACIPHER_API_KEYS);
+    const keys = csv
+        .split(',')
+        .map(x => x.trim())
+        .filter(Boolean);
+
+    return new Set(keys);
+}
+
+function isAuthorized(request, env) {
+    const allowedKeys = getApiKeys(env);
+    if (allowedKeys.size === 0) {
+        return true;
+    }
+
+    const providedKey = request.headers.get("x-api-key");
+    return Boolean(providedKey && allowedKeys.has(providedKey));
+}
+
 function parseKey(key) {
     if (key === undefined || key === null) {
         return [0];
@@ -156,6 +177,10 @@ export default {
             return jsonResponse({ error: "Method not allowed. Use POST." }, corsHeaders, 405, {
                 "Allow": "POST, OPTIONS",
             });
+        }
+
+        if (!isAuthorized(request, env)) {
+            return jsonResponse({ error: "Unauthorized" }, corsHeaders, 401);
         }
 
         const limiter = await checkRateLimit(request, env);
