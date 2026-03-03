@@ -17,7 +17,7 @@
   // KV namespace binding
   "kv_namespaces": [
     {
-      "binding": "KV",
+      "binding": "RATE_LIMIT_KV",
       "id": "4463b4470c604e0593eb3a6cf6213399"
     }
   ],

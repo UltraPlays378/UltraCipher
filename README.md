@@ -1,8 +1,8 @@
 # UltraCipher
 
  The ultimate hash & manifest setup for iOS Shortcuts  
-Version: v1.1  
-Mode: Deterministic (when salt/pepper are fixed), Glitch King style  
+Version: v1.2  
+Mode: Deterministic (when key/salt/pepper are fixed), Glitch King style  
 
 ---
 
@@ -19,6 +19,19 @@ Effective hashed material:
 salt + text + pepper
 ```
 
+## API behavior
+
+- Methods allowed: `POST` and `OPTIONS`.
+- Any other method returns `405` with JSON error.
+- Invalid JSON returns `400` with JSON error.
+
+## Input validation
+
+- `text` must be a non-empty string.
+- `text` max length: `4096`.
+- `salt` max length: `256`.
+- `key` must be an array or comma-separated string of up to `64` unsigned 32-bit integers.
+
 Example request body:
 
 ```json
@@ -31,8 +44,17 @@ Example request body:
 
 ## Rate limiting setup
 
-`wrangler.jsonc` includes a `ULTRACIPHER_RATE_LIMIT` binding configured
-with namespace id `378`.
+- Worker-side limit uses KV counters (fixed window): `60` requests per `60` seconds per IP.
+- `wrangler.jsonc` includes:
+  - `RATE_LIMIT_KV` KV binding (`id: 4463b4470c604e0593eb3a6cf6213399`)
+  - `ULTRACIPHER_RATE_LIMIT` ratelimit binding (`namespace_id: 378`)
 
-It also includes a KV binding named `KV` for custom counter/state storage
-with namespace id `4463b4470c604e0593eb3a6cf6213399`.
+## CORS setup
+
+Set `ALLOWED_ORIGINS` (comma-separated) to restrict origins, for example:
+
+```txt
+https://app.example.com,https://admin.example.com
+```
+
+If `ALLOWED_ORIGINS` is unset, CORS falls back to `*`.
