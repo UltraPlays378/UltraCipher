@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<icon>
+  <metadata>
+    <name>UltraCipher Icon</name>
+    <version>1.0</version>
+  </metadata>
+  <canvas width="64" height="64" background="#0d1324" radius="12"/>
+  <lock bodyX="18" bodyY="34" bodyWidth="28" bodyHeight="11" bodyFill="#7f4dff"/>
+  <lock holeX="28" holeY="40" holeWidth="8" holeHeight="8" holeFill="#0d1324"/>
+  <shackle x="24" y="28" width="16" height="11" stroke="#9fe7ff" strokeWidth="4"/>
+</icon>
