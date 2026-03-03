@@ -31,9 +31,8 @@ Example request body:
 
 ## Rate limiting setup
 
-`wrangler.jsonc` includes a `ULTRACIPHER_RATE_LIMIT` binding. You must replace
-`REPLACE_WITH_REAL_NAMESPACE_ID` with your real Cloudflare Rate Limiting
-namespace id before deploy.
+`wrangler.jsonc` includes a `ULTRACIPHER_RATE_LIMIT` binding configured
+with namespace id `378`.
 
 It also includes a KV binding named `KV` for custom counter/state storage
 with namespace id `4463b4470c604e0593eb3a6cf6213399`.
