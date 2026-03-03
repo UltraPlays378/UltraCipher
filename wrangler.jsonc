@@ -8,6 +8,15 @@
   // Cloudflare compatibility date
   "compatibility_date": "2026-01-01",
 
+  // KV namespace binding for custom rate-limiting counters/state.
+  "kv_namespaces": [
+    {
+      "binding": "ULTRACIPHER_RATE_LIMIT_KV",
+      // Replace with your real KV namespace id.
+      "id": "REPLACE_WITH_REAL_KV_NAMESPACE_ID"
+    }
+  ],
+
   // Worker rate limiting binding
   "ratelimits": [
     {
