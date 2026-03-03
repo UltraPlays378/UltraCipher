@@ -8,6 +8,18 @@
   // Cloudflare compatibility date
   "compatibility_date": "2026-01-01",
 
+  // Worker rate limiting binding
+  "ratelimits": [
+    {
+      "name": "ULTRACIPHER_RATE_LIMIT",
+      "namespace_id": "1001",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    }
+  ],
+
   // Optional: routes if using a custom domain
   // "routes": ["https://ultracipher.antiparental378.workers.dev/*"]
 }

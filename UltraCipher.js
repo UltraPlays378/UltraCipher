@@ -29,8 +29,16 @@ function hash500(inputStr, key, rounds = 10) {
         .substring(0, 500);
 }
 
+function normalizeSalt(value) {
+    if (value === undefined || value === null) {
+        return "";
+    }
+
+    return typeof value === "string" ? value : String(value);
+}
+
 export default {
-    async fetch(request) {
+    async fetch(request, env) {
 
         // --- CORS headers ---
         const corsHeaders = {
@@ -58,7 +66,7 @@ if (request.method === "GET") {
 
         try {
             const body = await request.json();
-            const { text, key, raw } = body;
+            const { text, key, salt, raw } = body;
 
             if (!text) {
                 return new Response(JSON.stringify({ error: "No text provided" }), { 
@@ -70,7 +78,11 @@ if (request.method === "GET") {
             const keyArray = Array.isArray(key) ? key : 
                              (typeof key === "string" ? key.split(',').map(n => parseInt(n) || 0) : [0]);
 
-            const result = hash500(text, keyArray);
+            const normalizedSalt = normalizeSalt(salt);
+            const pepper = normalizeSalt(env?.ULTRACIPHER_PEPPER);
+            const materialToHash = `${normalizedSalt}${text}${pepper}`;
+
+            const result = hash500(materialToHash, keyArray);
 
             if (raw === true) {
                 return new Response(result, { 
