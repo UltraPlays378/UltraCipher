@@ -1,4 +1,6 @@
 {
+  "$schema": "node_modules/wrangler/config-schema.json",
+
   // Worker project name
   "name": "ultracipher",
 
@@ -6,8 +8,29 @@
   "main": "UltraCipher.js",
 
   // Cloudflare compatibility date
-  "compatibility_date": "2026-01-01",
+  "compatibility_date": "2025-02-04",
 
-  // Optional: routes if using a custom domain
-  // "routes": ["https://ultracipher.antiparental378.workers.dev/*"]
+  "observability": {
+    "enabled": true
+  },
+
+  // KV namespace binding
+  "kv_namespaces": [
+    {
+      "binding": "RATE_LIMIT_KV",
+      "id": "4463b4470c604e0593eb3a6cf6213399"
+    }
+  ],
+
+  // Worker rate limiting binding
+  "ratelimits": [
+    {
+      "name": "ULTRACIPHER_RATE_LIMIT",
+      "namespace_id": "378",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    }
+  ]
 }
