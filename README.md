@@ -35,15 +35,6 @@ Example request body:
 `REPLACE_WITH_REAL_NAMESPACE_ID` with your real Cloudflare Rate Limiting
 namespace id before deploy.
 
-It also includes a KV binding named `ULTRACIPHER_RATE_LIMIT_KV` for custom
-counter/state storage. Replace:
-
-- `REPLACE_WITH_ULTRACIPHER_KEYS_NAMESPACE_ID`
-- `REPLACE_WITH_ULTRACIPHER_KEYS_PREVIEW_ID` (for local `wrangler dev`)
-
-If needed, create a KV namespace (example name):
-
-```bash
-wrangler kv namespace create ultracipher-keys
-wrangler kv namespace create ultracipher-keys --preview
-```
+It also includes a KV binding named `KV` for custom counter/state storage.
+The current config uses namespace id `4463b4470c604e0593eb3a6cf6213399`; replace
+`<ID_OF_PREVIEW_KV_NAMESPACE_FOR_LOCAL_DEVELOPMENT>` for local `wrangler dev`.
