@@ -12,7 +12,8 @@
   "ratelimits": [
     {
       "name": "ULTRACIPHER_RATE_LIMIT",
-      "namespace_id": "1001",
+      // Replace with your real Cloudflare Rate Limiting namespace id.
+      "namespace_id": "REPLACE_WITH_REAL_NAMESPACE_ID",
       "simple": {
         "limit": 60,
         "period": 60

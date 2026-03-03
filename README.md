@@ -28,3 +28,9 @@ Example request body:
   "salt": "user-specific-random"
 }
 ```
+
+## Rate limiting setup
+
+`wrangler.jsonc` includes a `ULTRACIPHER_RATE_LIMIT` binding. You must replace
+`REPLACE_WITH_REAL_NAMESPACE_ID` with your real Cloudflare Rate Limiting
+namespace id before deploy.
